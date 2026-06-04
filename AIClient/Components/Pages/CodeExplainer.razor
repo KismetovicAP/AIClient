@@ -1,0 +1,512 @@
+@page "/code-explainer"
+@using AIClient.Application.Models
+@using AIClient.Domain.Entities
+@using AIClient.Domain.Interfaces
+@using AIClient.Domain.Enums
+@using AIClient.Components.Shared
+@using System.Diagnostics
+@inject ICodeExplanationService CodeExplanationService
+@inject ILogger<CodeExplainer> Logger
+@rendermode InteractiveServer
+
+<PageTitle>AI Code Explainer</PageTitle>
+
+<div class="code-explainer-container">
+    <div class="hero-section">
+        <h1 class="hero-title">
+            <i class="bi bi-stars"></i> AI Code Explainer
+        </h1>
+        <p class="hero-subtitle">
+            Powered by Claude AI • Understand any code instantly
+        </p>
+    </div>
+
+    <div class="main-content">
+        <div class="row g-4">
+            <!-- Input Section -->
+            <div class="col-lg-6">
+                <div class="card glass-card">
+                    <div class="card-header gradient-primary">
+                        <h5 class="mb-0">
+                            <i class="bi bi-code-square"></i> Your Code
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="modelSelect" class="form-label fw-semibold">
+                                <i class="bi bi-cpu"></i> AI Model
+                            </label>
+                            <select 
+                                id="modelSelect"
+                                class="form-select form-select-lg" 
+                                @bind="selectedModel"
+                                disabled="@isProcessing">
+                                @foreach (ClaudeModel model in Enum.GetValues(typeof(ClaudeModel)))
+                                {
+                                    <option value="@model">@model.GetDisplayName()</option>
+                                }
+                            </select>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> @selectedModel.GetDescription()
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="codeInput" class="form-label fw-semibold">
+                                <i class="bi bi-file-code"></i> Paste Your Code
+                            </label>
+                            <div class="code-input-wrapper">
+                                <textarea 
+                                    id="codeInput"
+                                    class="form-control code-textarea" 
+                                    rows="18" 
+                                    @bind="inputCode"
+                                    placeholder="// Paste your code here...
+// Supports any programming language
+// The AI will analyze and explain it"
+                                    disabled="@isProcessing"></textarea>
+                                <div class="code-stats">
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-file-text"></i> @inputCode.Length characters
+                                    </span>
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-list-ol"></i> @(inputCode.Split('\n').Length) lines
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button 
+                            class="btn btn-primary btn-lg w-100 btn-glow" 
+                            @onclick="ExplainCode"
+                            disabled="@(isProcessing || string.IsNullOrWhiteSpace(inputCode))">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Analyzing Code...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-lightbulb-fill"></i>
+                                <span>Explain Code</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="col-lg-6">
+                <div class="card glass-card">
+                    <div class="card-header gradient-success">
+                        <h5 class="mb-0">
+                            <i class="bi bi-book"></i> Explanation
+                        </h5>
+                    </div>
+                    <div class="card-body explanation-body">
+                        @if (isProcessing)
+                        {
+                            <div class="loading-state">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted">AI is analyzing your code...</p>
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" 
+                                         style="width: 100%"></div>
+                                </div>
+                            </div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(errorMessage))
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <strong>Error:</strong> @errorMessage
+                            </div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(explanation))
+                        {
+                            <div class="explanation-output">
+                                <MarkdownRenderer Content="@explanation" />
+                            </div>
+                            <div class="output-footer">
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-check-circle"></i> @explanation.Length characters
+                                </span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <i class="bi bi-chat-left-dots display-1 text-muted"></i>
+                                <h5 class="mt-3 text-muted">No explanation yet</h5>
+                                <p class="text-muted">Paste your code and click "Explain Code"</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card glass-card">
+                    <div class="card-header gradient-info d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history"></i> Request History
+                        </h5>
+                        @if (logs.Any())
+                        {
+                            <button class="btn btn-sm btn-outline-light" @onclick="ClearLogs">
+                                <i class="bi bi-trash"></i> Clear
+                            </button>
+                        }
+                    </div>
+                    <div class="card-body p-0">
+                        @if (logs.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover logs-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th><i class="bi bi-calendar-event"></i> Time</th>
+                                            <th><i class="bi bi-cpu"></i> Model</th>
+                                            <th><i class="bi bi-arrow-right"></i> Input</th>
+                                            <th><i class="bi bi-arrow-left"></i> Output</th>
+                                            <th><i class="bi bi-speedometer"></i> Latency</th>
+                                            <th><i class="bi bi-check-circle"></i> Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var log in logs.OrderByDescending(l => l.Timestamp).Take(10))
+                                        {
+                                            <tr class="@(log.IsSuccess ? "" : "table-danger")">
+                                                <td class="text-nowrap">
+                                                    <small>@log.Timestamp.ToLocalTime().ToString("MMM dd, HH:mm:ss")</small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-primary">@GetShortModelName(log.ModelUsed)</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info">@log.InputLength</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success">@log.OutputLength</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-warning text-dark">@log.LatencyMs ms</span>
+                                                </td>
+                                                <td>
+                                                    @if (log.IsSuccess)
+                                                    {
+                                                        <span class="text-success">
+                                                            <i class="bi bi-check-circle-fill"></i> Success
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-danger" title="@log.ErrorMessage">
+                                                            <i class="bi bi-x-circle-fill"></i> Failed
+                                                        </span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="empty-logs">
+                                <i class="bi bi-inbox display-4 text-muted"></i>
+                                <p class="text-muted mt-2">No requests yet</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .code-explainer-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 0;
+    }
+
+    .hero-section {
+        text-align: center;
+        color: white;
+        margin-bottom: 3rem;
+        animation: fadeInDown 0.6s ease-out;
+    }
+
+    .hero-title {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .hero-subtitle {
+        font-size: 1.2rem;
+        opacity: 0.95;
+    }
+
+    .main-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 1rem;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    .gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 1rem 1rem 0 0 !important;
+        padding: 1rem 1.5rem;
+    }
+
+    .gradient-success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        border-radius: 1rem 1rem 0 0 !important;
+        padding: 1rem 1.5rem;
+    }
+
+    .gradient-info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        border-radius: 1rem 1rem 0 0 !important;
+        padding: 1rem 1.5rem;
+    }
+
+    .code-input-wrapper {
+        position: relative;
+    }
+
+    .code-textarea {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.9rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 0.5rem;
+        resize: none;
+        transition: all 0.3s ease;
+    }
+
+    .code-textarea:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .code-stats {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .btn-glow {
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+    }
+
+    .btn-glow:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .explanation-body {
+        min-height: 600px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .explanation-output {
+        flex: 1;
+        max-height: 550px;
+        overflow-y: auto;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+
+    .output-footer {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .loading-state, .empty-state, .empty-logs {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        text-align: center;
+    }
+
+    .logs-table {
+        font-size: 0.9rem;
+    }
+
+    .logs-table thead {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+
+    .logs-table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .logs-table tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.05);
+        transform: scale(1.01);
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@media (max-width: 992px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+    }
+</style>
+
+@code {
+    private string inputCode = string.Empty;
+    private string explanation = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isProcessing = false;
+    private ClaudeModel selectedModel = ClaudeModel.Haiku;
+    private List<ExplanationLogViewModel> logs = new();
+
+    private string GetShortModelName(string fullName)
+    {
+        if (fullName.Contains("Haiku")) return "Haiku";
+        if (fullName.Contains("Sonnet")) return "Sonnet";
+        if (fullName.Contains("Opus")) return "Opus";
+        return "Unknown";
+    }
+
+    private async Task ExplainCode()
+    {
+        if (string.IsNullOrWhiteSpace(inputCode))
+        {
+            return;
+        }
+
+        isProcessing = true;
+        explanation = string.Empty;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            var request = new CodeExplanationRequest
+            {
+                Code = inputCode,
+                Timestamp = DateTime.UtcNow,
+                Model = selectedModel
+            };
+
+            var response = await CodeExplanationService.ExplainCodeAsync(request);
+
+            stopwatch.Stop();
+
+            if (response.IsSuccess)
+            {
+                explanation = response.Explanation;
+            }
+            else
+            {
+                errorMessage = response.ErrorMessage ?? "An unknown error occurred.";
+            }
+
+            var log = new ExplanationLogViewModel
+            {
+                Id = Guid.NewGuid(),
+                Timestamp = request.Timestamp,
+                InputLength = request.InputLength,
+                OutputLength = response.OutputLength,
+                LatencyMs = stopwatch.ElapsedMilliseconds,
+                IsSuccess = response.IsSuccess,
+                ErrorMessage = response.ErrorMessage,
+                ModelUsed = selectedModel.GetDisplayName()
+            };
+
+            logs.Add(log);
+
+            Logger.LogInformation(
+                "Code explanation request completed. Model: {Model}, Success: {IsSuccess}, Latency: {LatencyMs}ms",
+                selectedModel.GetDisplayName(),
+                response.IsSuccess,
+                stopwatch.ElapsedMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            errorMessage = $"Unexpected error: {ex.Message}";
+            Logger.LogError(ex, "Unexpected error during code explanation");
+
+            var errorLog = new ExplanationLogViewModel
+            {
+                Id = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow,
+                InputLength = inputCode.Length,
+                OutputLength = 0,
+                LatencyMs = stopwatch.ElapsedMilliseconds,
+                IsSuccess = false,
+                ErrorMessage = ex.Message,
+                ModelUsed = selectedModel.GetDisplayName()
+            };
+
+            logs.Add(errorLog);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearLogs()
+    {
+        logs.Clear();
+        Logger.LogInformation("Logs cleared");
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,242 @@
+﻿@page "/"
+
+<PageTitle>Home - AI Code Explainer</PageTitle>
+
+<div class="home-container">
+    <div class="hero-banner">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-3 fw-bold mb-4">
+                        <i class="bi bi-stars"></i> AI Code Explainer
+                    </h1>
+                    <p class="lead mb-4">
+                        Understand any code instantly with the power of Claude AI. 
+                        Get detailed explanations for functions, classes, algorithms, and more.
+                    </p>
+                    <div class="d-grid gap-2 d-md-flex">
+                        <a href="/code-explainer" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-play-fill"></i> Get Started
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="feature-showcase">
+                        <i class="bi bi-code-slash display-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                    </div>
+                    <h3>Lightning Fast</h3>
+                    <p>Get instant explanations powered by Claude 3.5 Haiku, Sonnet, and Opus models</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-translate"></i>
+                    </div>
+                    <h3>Any Language</h3>
+                    <p>Supports all programming languages - Python, JavaScript, C#, Java, and more</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h3>Detailed Insights</h3>
+                    <p>Get comprehensive explanations with examples, use cases, and best practices</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="setup-section mt-5">
+            <div class="card glass-card">
+                <div class="card-header gradient-warning">
+                    <h4 class="mb-0">
+                        <i class="bi bi-gear-fill"></i> Quick Setup
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-1-circle-fill text-primary"></i> Get API Key</h5>
+                            <p>Sign up at <a href="https://console.anthropic.com" target="_blank">Anthropic Console</a> and create an API key</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-2-circle-fill text-primary"></i> Configure</h5>
+                            <p>Add your key to <code>appsettings.json</code> or use user secrets</p>
+                            <pre class="bg-dark text-light p-2 rounded"><code>dotnet user-secrets set "ClaudeApi:ApiKey" "your-key"</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="models-section mt-5">
+            <h2 class="text-center mb-4">Choose Your AI Model</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="model-card">
+                        <div class="model-badge">Recommended</div>
+                        <h4><i class="bi bi-lightning"></i> Claude 3.5 Haiku</h4>
+                        <p class="model-price">$0.25 / 1M tokens</p>
+                        <ul>
+                            <li>Fastest responses</li>
+                            <li>Most cost-effective</li>
+                            <li>Great for simple code</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="model-card">
+                        <div class="model-badge">Best Value</div>
+                        <h4><i class="bi bi-star-fill"></i> Claude 3.5 Sonnet</h4>
+                        <p class="model-price">$3.00 / 1M tokens</p>
+                        <ul>
+                            <li>Most intelligent</li>
+                            <li>Balanced performance</li>
+                            <li>Best for complex code</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="model-card">
+                        <h4><i class="bi bi-cpu"></i> Claude 3 Opus</h4>
+                        <p class="model-price">$15.00 / 1M tokens</p>
+                        <ul>
+                            <li>Previous generation</li>
+                            <li>Very powerful</li>
+                            <li>Deep analysis</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .home-container {
+        min-height: 100vh;
+    }
+
+    .hero-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 5rem 0;
+        margin-bottom: 3rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
+    .feature-showcase {
+        text-align: center;
+        font-size: 15rem;
+        opacity: 0.2;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @@keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+    }
+
+    .feature-card {
+        text-align: center;
+        padding: 2rem;
+        border-radius: 1rem;
+        background: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .feature-icon {
+        font-size: 3rem;
+        color: #667eea;
+        margin-bottom: 1rem;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .gradient-warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border-radius: 1rem 1rem 0 0 !important;
+        padding: 1rem 1.5rem;
+    }
+
+    .model-card {
+        position: relative;
+        padding: 2rem;
+        border-radius: 1rem;
+        background: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .model-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .model-badge {
+        position: absolute;
+        top: -10px;
+        right: 20px;
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .model-price {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin: 1rem 0;
+    }
+
+    .model-card ul {
+        list-style: none;
+        padding: 0;
+        text-align: left;
+    }
+
+    .model-card li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .model-card li:before {
+        content: "✓ ";
+        color: #667eea;
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+</style>
+
