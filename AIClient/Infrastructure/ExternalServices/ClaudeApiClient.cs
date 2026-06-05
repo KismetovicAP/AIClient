@@ -5,6 +5,8 @@ using AIClient.Domain.Interfaces;
 using AIClient.Infrastructure.Configuration;
 using Microsoft.Extensions.Options;
 using AIClient.Domain.Enums;
+using AIClient.Domain.Exceptions;
+using System.Net;
 
 namespace AIClient.Infrastructure.ExternalServices;
 
@@ -78,7 +80,35 @@ public class ClaudeApiClient : IClaudeApiClient
 
             return textContent;
         }
-        catch (Exception ex) when (ex is not InvalidOperationException)
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            // 429 Too Many Requests - Rate limit or quota exceeded
+            _logger.LogWarning(ex, "Rate limit or quota exceeded for model: {Model}", model.GetDisplayName());
+            throw new InsufficientCreditsException(model.GetDisplayName(), "Rate limit or quota exceeded");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.PaymentRequired)
+        {
+            // 402 Payment Required - Insufficient credits
+            _logger.LogWarning(ex, "Insufficient credits for model: {Model}", model.GetDisplayName());
+            throw new InsufficientCreditsException(model.GetDisplayName(), "Insufficient credits or payment required");
+        }
+        catch (Exception ex) when (ex.Message.Contains("insufficient_quota") || 
+                                     ex.Message.Contains("quota_exceeded") ||
+                                     ex.Message.Contains("rate_limit"))
+        {
+            // Check error message for quota/credit issues
+            _logger.LogWarning(ex, "Quota or credit issue detected for model: {Model}", model.GetDisplayName());
+            throw new InsufficientCreditsException(model.GetDisplayName(), ex.Message);
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (InsufficientCreditsException)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Error communicating with Claude API");
             throw new Exception("Failed to communicate with Claude API. Please check your internet connection and API key.", ex);
