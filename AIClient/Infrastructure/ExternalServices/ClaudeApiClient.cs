@@ -66,6 +66,19 @@ public class ClaudeApiClient : IClaudeApiClient
                 throw new InvalidOperationException("Claude API returned an empty response");
             }
 
+            // Check if response was truncated due to max_tokens limit
+            if (messageResponse.StopReason == "max_tokens")
+            {
+                _logger.LogWarning(
+                    "Response truncated due to MaxTokens limit. MaxTokens: {MaxTokens}, Model: {Model}", 
+                    _settings.MaxTokens, 
+                    model.GetDisplayName());
+
+                throw new InvalidOperationException(
+                    $"Response exceeded the configured token limit of {_settings.MaxTokens}. " +
+                    $"The explanation was incomplete. Please increase 'MaxTokens' in appsettings.json or reduce the input size.");
+            }
+
             // Extract text content from response
             var textContent = string.Join("\n", messageResponse.Content
                 .OfType<TextContent>()

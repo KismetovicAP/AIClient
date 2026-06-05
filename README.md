@@ -164,6 +164,13 @@ The application includes comprehensive error handling with custom exceptions:
   - Validated on server-side (service layer)
   - Error message shows actual length vs. configured maximum
 
+### Output Validation
+- **Token Limit Exceeded**: When AI response is truncated due to `MaxTokens` limit
+  - Detected by checking the API's `StopReason` property
+  - Request marked as **Failed** to prevent incomplete explanations
+  - Error message explains the limit and suggests increasing `MaxTokens` or reducing input
+  - Useful for testing: set `MaxTokens` to a very low value (e.g., 40) to trigger this
+
 ### API Quota & Rate Limits
 - **Insufficient Credits**: `InsufficientCreditsException` thrown when:
   - API returns 429 (Too Many Requests)
@@ -180,6 +187,7 @@ The application includes comprehensive error handling with custom exceptions:
 
 ### User-Friendly Error Messages
 - "Input too large! Please reduce to X characters or less."
+- "Response exceeded the configured token limit of X. The explanation was incomplete. Please increase 'MaxTokens' in appsettings.json or reduce the input size."
 - "Insufficient credits or quota exceeded for model: [Model Name]"
 - "Failed to communicate with Claude API. Please check your internet connection and API key."
 
@@ -219,7 +227,7 @@ Edit `appsettings.json` to customize the application behavior:
 |----------|-------------|---------|-------|
 | `ApiKey` | Your Anthropic API key | (required) | Use user secrets or environment variables for security |
 | `DefaultModel` | The Claude model to use by default | `claude-3-5-haiku-20240307` | Available models: Haiku (fastest/cheapest), Sonnet (balanced), Opus (most capable) |
-| `MaxTokens` | Maximum tokens in API response | `4096` | Controls output length; higher values cost more |
+| `MaxTokens` | Maximum tokens in API response | `4096` | Controls output length; **truncated responses are treated as errors**; higher values cost more |
 | `MaxInputLength` | Maximum characters allowed in code input | `10000` | Prevents oversized requests; validated on both client and server |
 
 ### Available Claude Models
@@ -260,7 +268,22 @@ To get longer explanations:
 }
 ```
 
-⚠️ **Note**: Higher token limits increase API costs. Claude pricing is per-token.
+⚠️ **Note**: Higher token limits increase API costs. Claude pricing is per-token. If the output exceeds `MaxTokens`, the response will be marked as **Failed** with an error message.
+
+#### Test Token Limit Validation
+
+To test the token limit protection, temporarily set a very low value:
+
+```json
+{
+  "ClaudeApi": {
+    "MaxTokens": 40
+  }
+}
+```
+
+Then paste any code longer than 20 lines and request an explanation. The response will be truncated and the request will **fail** with the error:
+> "Response exceeded the configured token limit of 40. The explanation was incomplete. Please increase 'MaxTokens' in appsettings.json or reduce the input size."
 
 #### Switch Default Model
 
