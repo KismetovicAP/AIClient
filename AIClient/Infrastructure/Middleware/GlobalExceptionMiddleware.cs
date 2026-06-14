@@ -1,10 +1,19 @@
 namespace AIClient.Infrastructure.Middleware;
 
+/// <summary>
+/// ASP.NET Core middleware that catches unhandled exceptions, logs them,
+/// and writes a safe plain-text error message to the HTTP response.
+/// </summary>
 public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="GlobalExceptionMiddleware"/>.
+    /// </summary>
+    /// <param name="next">The next middleware in the pipeline.</param>
+    /// <param name="logger">Logger for unhandled exception telemetry.</param>
     public GlobalExceptionMiddleware(
         RequestDelegate next,
         ILogger<GlobalExceptionMiddleware> logger)
@@ -13,6 +22,10 @@ public class GlobalExceptionMiddleware
         _logger = logger;
     }
 
+    /// <summary>
+    /// Invokes the next middleware and intercepts any unhandled exception.
+    /// </summary>
+    /// <param name="context">The current HTTP context.</param>
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -26,6 +39,11 @@ public class GlobalExceptionMiddleware
         }
     }
 
+    /// <summary>
+    /// Writes a type-mapped, user-safe error message and sets HTTP 500 on the response.
+    /// </summary>
+    /// <param name="context">The current HTTP context.</param>
+    /// <param name="exception">The unhandled exception.</param>
     private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;

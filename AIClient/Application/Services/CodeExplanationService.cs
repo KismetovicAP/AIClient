@@ -8,12 +8,22 @@ using Microsoft.Extensions.Options;
 
 namespace AIClient.Application.Services;
 
+/// <summary>
+/// Default implementation of <see cref="ICodeExplanationService"/> that validates input,
+/// forwards the request to <see cref="IClaudeApiClient"/>, and captures structured outcomes.
+/// </summary>
 public class CodeExplanationService : ICodeExplanationService
 {
     private readonly IClaudeApiClient _claudeApiClient;
     private readonly ILogger<CodeExplanationService> _logger;
     private readonly ClaudeApiSettings _settings;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="CodeExplanationService"/>.
+    /// </summary>
+    /// <param name="claudeApiClient">The Claude API client used to submit prompts.</param>
+    /// <param name="logger">Logger for request diagnostics.</param>
+    /// <param name="settings">Bound configuration containing token and input limits.</param>
     public CodeExplanationService(
         IClaudeApiClient claudeApiClient,
         ILogger<CodeExplanationService> logger,
@@ -24,6 +34,7 @@ public class CodeExplanationService : ICodeExplanationService
         _settings = settings.Value;
     }
 
+    /// <inheritdoc />
     public async Task<CodeExplanationResponse> ExplainCodeAsync(
         CodeExplanationRequest request,
         CancellationToken cancellationToken = default)
@@ -36,13 +47,9 @@ public class CodeExplanationService : ICodeExplanationService
 
         try
         {
-            // Validation 1: Check if code is empty
             if (string.IsNullOrWhiteSpace(request.Code))
-            {
                 throw new ArgumentException("Code cannot be empty.", nameof(request));
-            }
 
-            // Validation 2: Check input size limit
             if (request.InputLength > _settings.MaxInputLength)
             {
                 _logger.LogWarning(
@@ -55,7 +62,8 @@ public class CodeExplanationService : ICodeExplanationService
 
             var prompt = $"Please explain the following code in detail, including its purpose, functionality, and any important implementation details:\n\n```\n{request.Code}\n```";
 
-            _logger.LogInformation("Sending code explanation request using model: {Model}. Input length: {InputLength}", 
+            _logger.LogInformation(
+                "Sending code explanation request using model: {Model}. Input length: {InputLength}",
                 request.Model.GetDisplayName(), request.InputLength);
 
             var explanation = await _claudeApiClient.SendMessageAsync(prompt, request.Model, cancellationToken);
@@ -63,7 +71,8 @@ public class CodeExplanationService : ICodeExplanationService
             response.Explanation = explanation;
             response.IsSuccess = true;
 
-            _logger.LogInformation("Code explanation completed successfully. Output length: {OutputLength}, Latency: {LatencyMs}ms",
+            _logger.LogInformation(
+                "Code explanation completed successfully. Output length: {OutputLength}, Latency: {LatencyMs}ms",
                 response.OutputLength, stopwatch.ElapsedMilliseconds);
         }
         catch (InputTooLargeException ex)
